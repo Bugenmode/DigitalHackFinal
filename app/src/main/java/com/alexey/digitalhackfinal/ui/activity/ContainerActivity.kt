@@ -9,9 +9,10 @@ import android.os.Bundle
 import android.telephony.CellInfoGsm
 import android.telephony.TelephonyManager
 import com.alexey.digitalhackfinal.R
+import com.alexey.digitalhackfinal.ui.base.BaseActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity() {
+class ContainerActivity : BaseActivity() {
 
     @SuppressLint("SetTextI18n", "MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,9 +36,7 @@ class MainActivity : AppCompatActivity() {
 
         val downSpeed = networkCapabilities.linkDownstreamBandwidthKbps
         val upSpeed = networkCapabilities.linkUpstreamBandwidthKbps
-
-
-
+        
         txtOperatorName.text = "$operatorName $downSpeed $upSpeed"
     }
 }

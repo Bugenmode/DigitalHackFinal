@@ -1,13 +1,24 @@
 package com.alexey.digitalhackfinal
 
 import android.app.Application
+import com.alexey.digitalhackfinal.di.ApplicationComponent
+import com.alexey.digitalhackfinal.di.DaggerApplicationComponent
+import com.alexey.digitalhackfinal.di.DaggerComponentProvider
 import timber.log.Timber
 
-class App : Application() {
+class App : Application(), DaggerComponentProvider {
+
+    override val component: ApplicationComponent by lazy {
+        DaggerApplicationComponent.builder()
+            .application(this)
+            .build()
+    }
 
     override fun onCreate() {
         super.onCreate()
         setupTimber()
+
+        component.inject(this)
     }
 
     private fun setupTimber() {
