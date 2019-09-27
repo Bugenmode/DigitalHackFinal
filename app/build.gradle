@@ -77,4 +77,9 @@ dependencies {
 
     //Maps
     implementation 'com.google.android.gms:play-services-maps:17.0.0'
+
+    implementation(name:'HERE-sdk', ext:'aar')
+
+    implementation 'org.locationtech.jts:jts-core:1.15.0'
+
 }

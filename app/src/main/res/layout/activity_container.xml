@@ -8,11 +8,10 @@
         tools:context=".ui.activity.ContainerActivity">
 
     <fragment
+            class="com.here.android.mpa.mapping.SupportMapFragment"
+            android:id="@+id/mapfragment"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:id="@+id/map"
-            tools:context=".ui.activity.ContainerActivity"
-            android:name="com.google.android.gms.maps.SupportMapFragment"/>
+            android:layout_height="match_parent"/>
 
     <TextView
             android:id="@+id/txtOperatorName"
