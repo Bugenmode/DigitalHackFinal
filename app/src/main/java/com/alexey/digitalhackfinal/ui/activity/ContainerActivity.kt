@@ -36,7 +36,7 @@ class ContainerActivity : BaseActivity() {
 
         val downSpeed = networkCapabilities.linkDownstreamBandwidthKbps
         val upSpeed = networkCapabilities.linkUpstreamBandwidthKbps
-        
+
         txtOperatorName.text = "$operatorName $downSpeed $upSpeed"
     }
 }
