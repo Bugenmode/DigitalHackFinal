@@ -15,6 +15,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "490664750983-t4gsq9l7in0acj0i4jeb92lkn3pt9hct.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.alexey.digitalhackfinal",
+            "certificate_hash": "ddbba42140a9526d3a44c7b5c1ebbab262b9134d"
+          }
+        },
+        {
           "client_id": "490664750983-m715f579gchi8kvrmqmbgh2etgu9ofrl.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -4,20 +4,24 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.telephony.CellInfoGsm
 import android.telephony.TelephonyManager
 import com.alexey.digitalhackfinal.R
 import com.alexey.digitalhackfinal.ui.base.BaseActivity
-import kotlinx.android.synthetic.main.activity_main.*
+import com.google.android.gms.maps.*
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
+import kotlinx.android.synthetic.main.activity_container.*
 
-class ContainerActivity : BaseActivity() {
+class ContainerActivity : BaseActivity(), OnMapReadyCallback {
+
+    val SYDNEY = LatLng(-33.862, 151.21)
+    val ZOOM_LEVEL = 13f
 
     @SuppressLint("SetTextI18n", "MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_container)
 
         val telephonyManager = applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         val operatorName = telephonyManager.networkOperatorName
@@ -29,14 +33,21 @@ class ContainerActivity : BaseActivity() {
             TODO("VERSION.SDK_INT < M")
         }
 
-        val cellInfoGsm = telephonyManager.allCellInfo[0] as CellInfoGsm
-        val cellSignalStrengthGsm = cellInfoGsm.cellSignalStrength
-
-        cellSignalStrengthGsm.dbm
-
         val downSpeed = networkCapabilities.linkDownstreamBandwidthKbps
         val upSpeed = networkCapabilities.linkUpstreamBandwidthKbps
 
         txtOperatorName.text = "$operatorName $downSpeed $upSpeed"
+
+        val mapFragment : SupportMapFragment? =
+            supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
+        mapFragment?.getMapAsync(this)
+    }
+
+    override fun onMapReady(googleMap: GoogleMap?) {
+        googleMap ?: return
+        with(googleMap) {
+            moveCamera(CameraUpdateFactory.newLatLngZoom(SYDNEY, ZOOM_LEVEL))
+            addMarker(MarkerOptions().position(SYDNEY))
+        }
     }
 }
