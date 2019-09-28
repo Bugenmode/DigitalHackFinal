@@ -69,6 +69,7 @@
                     android:layout_height="32dp"
                     android:layout_marginEnd="16dp"
                     android:layout_marginStart="16dp"
+                    android:text="@={vm.wayA}"
                     android:visibility="invisible"
                     android:gravity="center"
                     android:hint="@string/way_A"
@@ -83,6 +84,7 @@
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
                     android:visibility="invisible"
+                    android:text="@={vm.wayB}"
                     android:gravity="center"
                     android:hint="@string/way_B"
                     android:background="@drawable/edit_text_bg_grey"/>

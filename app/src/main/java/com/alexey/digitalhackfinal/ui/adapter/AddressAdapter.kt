@@ -8,11 +8,18 @@ import com.alexey.digitalhackfinal.R
 import com.here.android.mpa.search.Address
 import kotlinx.android.synthetic.main.item_address.view.*
 
-class AddressAdapter(private var list: List<Address>) : RecyclerView.Adapter<AddressAdapter.ViewHolder>() {
+class AddressAdapter : RecyclerView.Adapter<AddressAdapter.ViewHolder>() {
+
+    var list: MutableList<Address> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_address, parent, false)
         return ViewHolder(view)
+    }
+
+    fun setAddressList(addresses : MutableList<Address>) {
+        this.list = addresses
+        notifyDataSetChanged()
     }
 
     override fun getItemCount(): Int {

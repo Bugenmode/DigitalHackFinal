@@ -55,7 +55,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
     private var objectList = ArrayList<MapObject>()
 
-    private lateinit var adapter: AddressAdapter
+    private var adapter = AddressAdapter()
 
     private var list = ArrayList<Address>()
 
@@ -90,6 +90,8 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         }
 
         setListener()
+        setObservers()
+
     }
 
     private fun expand() {
@@ -138,11 +140,27 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
     private fun setListener() {
 
         b.btnSearch.setOnClickListener {
-            val searchRequest = SearchRequest(b.etWayA.text.toString())
-            searchRequest.setSearchCenter(map.center)
-            searchRequest.execute(discoveryResultPage)
-
+            Toast.makeText(requireContext(), "Проложение пути", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun setObservers() {
+        viewModel.wayA.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+            if (it != null) {
+                val searchRequest = SearchRequest(it)
+                searchRequest.setSearchCenter(map.center)
+                searchRequest.execute(discoveryResultPage)
+            }
+        })
+
+
+        viewModel.wayB.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+            if (it != null) {
+                val searchRequest = SearchRequest(it)
+                searchRequest.setSearchCenter(map.center)
+                searchRequest.execute(discoveryResultPage)
+            }
+        })
     }
 
     override fun onPause() {
@@ -299,7 +317,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
                             if (address != null) {
                                 list.add(address)
 
-                                adapter = AddressAdapter(list)
+                                adapter.setAddressList(list)
 
                                 b.addresses.adapter = adapter
                             }
