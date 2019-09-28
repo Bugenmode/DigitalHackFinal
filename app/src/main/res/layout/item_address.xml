@@ -6,6 +6,7 @@
         android:layout_height="56dp">
 
     <TextView
+            android:id="@+id/txtAddress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@android:color/black"

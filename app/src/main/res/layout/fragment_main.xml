@@ -22,7 +22,7 @@
         <RelativeLayout
                 android:id="@+id/detailsLayout"
                 android:layout_width="match_parent"
-                android:layout_height="900dp"
+                android:layout_height="@dimen/size_100"
                 android:background="@drawable/layout_bg"
                 android:animateLayoutChanges="true"
                 android:layout_marginEnd="8dp"
@@ -58,7 +58,7 @@
                     android:layout_marginStart="18dp"
                     android:layout_below="@id/txtDropUp"
                     android:layout_marginTop="32dp"
-                    android:visibility="visible"
+                    android:visibility="invisible"
                     android:src="@drawable/ic_wayicon"/>
 
             <EditText
@@ -69,7 +69,7 @@
                     android:layout_height="32dp"
                     android:layout_marginEnd="16dp"
                     android:layout_marginStart="16dp"
-                    android:visibility="visible"
+                    android:visibility="invisible"
                     android:gravity="center"
                     android:hint="@string/way_A"
                     android:background="@drawable/edit_text_bg_blue"/>
@@ -82,7 +82,7 @@
                     android:layout_toEndOf="@id/imgWayPoint"
                     android:layout_marginStart="16dp"
                     android:layout_marginEnd="16dp"
-                    android:visibility="visible"
+                    android:visibility="invisible"
                     android:gravity="center"
                     android:hint="@string/way_B"
                     android:background="@drawable/edit_text_bg_grey"/>
@@ -94,7 +94,7 @@
                     android:layout_marginStart="30dp"
                     android:layout_marginEnd="30dp"
                     android:layout_alignParentBottom="true"
-                    android:visibility="visible"
+                    android:visibility="invisible"
                     android:layout_marginBottom="24dp"
                     android:textColor="@android:color/white"
                     android:text="@string/searchWay"
@@ -109,6 +109,7 @@
                     android:layout_above="@id/btnSearch"
                     android:layout_marginBottom="16dp"
                     tools:listitem="@layout/item_address"
+                    android:visibility="invisible"
                     android:layout_below="@id/etWayB">
 
             </androidx.recyclerview.widget.RecyclerView>

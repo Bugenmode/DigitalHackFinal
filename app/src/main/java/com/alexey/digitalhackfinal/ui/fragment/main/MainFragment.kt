@@ -13,6 +13,7 @@ import android.telephony.TelephonyManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Adapter
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
@@ -20,6 +21,7 @@ import androidx.lifecycle.ViewModelProviders
 import com.alexey.digitalhackfinal.R
 import com.alexey.digitalhackfinal.databinding.FragmentMainBinding
 import com.alexey.digitalhackfinal.di.injector
+import com.alexey.digitalhackfinal.ui.adapter.AddressAdapter
 import com.alexey.digitalhackfinal.ui.base.BaseFragment
 import com.alexey.digitalhackfinal.utils.collapse
 import com.alexey.digitalhackfinal.utils.expand
@@ -52,6 +54,10 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
     private var pendingUpdated: Runnable? = null
 
     private var objectList = ArrayList<MapObject>()
+
+    private lateinit var adapter: AddressAdapter
+
+    private var list = ArrayList<Address>()
 
     private val viewModel by lazy {
         ViewModelProviders.of(this, injector.vmMain()).get(MainViewModel::class.java)
@@ -92,6 +98,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         b.etWayA.visibility = View.INVISIBLE
         b.etWayB.visibility = View.INVISIBLE
         b.btnSearch.visibility = View.INVISIBLE
+        b.addresses.visibility = View.INVISIBLE
     }
 
     private fun collapse() {
@@ -100,6 +107,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         b.etWayA.visibility = View.VISIBLE
         b.etWayB.visibility = View.VISIBLE
         b.btnSearch.visibility = View.VISIBLE
+        b.addresses.visibility = View.VISIBLE
     }
 
     private fun requestPermission() {
@@ -281,7 +289,21 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
                 for (item in result.items) {
                     if (item.resultType == DiscoveryResult.ResultType.PLACE) {
                         val placeLink = item as PlaceLink
-                        addMarkerAtPlace(placeLink)
+//                        addMarkerAtPlace(placeLink)
+
+                        val mapMarker = MapMarker()
+                        mapMarker.coordinate = GeoCoordinate(placeLink.position)
+
+                        val revGeoCode = ReverseGeocodeRequest(mapMarker.coordinate)
+                        revGeoCode.execute { address, errorCode ->
+                            if (address != null) {
+                                list.add(address)
+
+                                adapter = AddressAdapter(list)
+
+                                b.addresses.adapter = adapter
+                            }
+                        }
                     }
                 }
             }
@@ -303,17 +325,13 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
         val revGeoCode = ReverseGeocodeRequest(mapMarker.coordinate)
 
-        revGeoCode.execute(result)
+//        revGeoCode.execute(result)
 
 //        map.addMapObject(mapMarker)
 //        objectList.add(mapMarker)
     }
 
     //val result = ResultListener<Location> { location, errorCode -> Timber.d(location?.address.toString()) }
-
-    val result = ResultListener<Address> { address, errorCode ->
-        Toast.makeText(requireContext(), address?.text, Toast.LENGTH_LONG).show()
-    }
 
     companion object {
         const val GEO_POSITION_CODE = 200
