@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout>
+<layout xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools">
 
     <data>
         <variable
@@ -22,24 +22,96 @@
         <RelativeLayout
                 android:id="@+id/detailsLayout"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:background="@android:color/white"
+                android:layout_height="900dp"
+                android:background="@drawable/layout_bg"
                 android:animateLayoutChanges="true"
+                android:layout_marginEnd="8dp"
+                android:layout_marginStart="8dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:focusableInTouchMode="true"
                 android:descendantFocusability="beforeDescendants"
                 android:layout_alignParentBottom="true">
 
+            <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="8dp"
+                    android:src="@drawable/ic_rectangle"/>
+
             <TextView
                     android:id="@+id/txtDropUp"
-                    android:layout_marginTop="32dp"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Выбрать путь"
-                    android:textAlignment="center"
+                    android:textColor="@color/greyDark"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginTop="24dp"
                     android:textStyle="bold"
-                    android:textSize="20sp" />
+                    android:textSize="20sp"/>
+
+            <ImageView
+                    android:id="@+id/imgWayPoint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="18dp"
+                    android:layout_below="@id/txtDropUp"
+                    android:layout_marginTop="32dp"
+                    android:visibility="visible"
+                    android:src="@drawable/ic_wayicon"/>
+
+            <EditText
+                    android:id="@+id/etWayA"
+                    android:layout_alignTop="@id/imgWayPoint"
+                    android:layout_toEndOf="@id/imgWayPoint"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginStart="16dp"
+                    android:visibility="visible"
+                    android:gravity="center"
+                    android:hint="@string/way_A"
+                    android:background="@drawable/edit_text_bg_blue"/>
+
+            <EditText
+                    android:id="@+id/etWayB"
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:layout_alignBottom="@id/imgWayPoint"
+                    android:layout_toEndOf="@id/imgWayPoint"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:visibility="visible"
+                    android:gravity="center"
+                    android:hint="@string/way_B"
+                    android:background="@drawable/edit_text_bg_grey"/>
+
+            <Button
+                    android:id="@+id/btnSearch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="30dp"
+                    android:layout_marginEnd="30dp"
+                    android:layout_alignParentBottom="true"
+                    android:visibility="visible"
+                    android:layout_marginBottom="24dp"
+                    android:textColor="@android:color/white"
+                    android:text="@string/searchWay"
+                    android:background="@drawable/button_bg"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/addresses"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="32dp"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    android:layout_above="@id/btnSearch"
+                    android:layout_marginBottom="16dp"
+                    tools:listitem="@layout/item_address"
+                    android:layout_below="@id/etWayB">
+
+            </androidx.recyclerview.widget.RecyclerView>
 
         </RelativeLayout>
 

@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">DigitalHackFinal</string>
     <string name="title_activity_maps">Map</string>
+    <string name="way_A">Ваше местоположение</string>
+    <string name="way_B">Пункт назначения</string>
+    <string name="searchWay">Проложить путь</string>
 </resources>

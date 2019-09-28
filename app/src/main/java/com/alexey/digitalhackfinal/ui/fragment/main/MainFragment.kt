@@ -26,13 +26,15 @@ import com.alexey.digitalhackfinal.utils.expand
 import com.here.android.mpa.common.*
 import com.here.android.mpa.mapping.*
 import com.here.android.mpa.mapping.Map
+import com.here.android.mpa.search.*
 import timber.log.Timber
-//import com.here.android.mpa.common.LocationDataSourceHERE
+import java.lang.Exception
 import java.lang.StringBuilder
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.collections.ArrayList
 
+@Suppress("DEPRECATION")
 class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListener, Map.OnTransformListener {
 
     private lateinit var b: FragmentMainBinding
@@ -48,6 +50,8 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
     private var mapTransforming: Boolean = false
 
     private var pendingUpdated: Runnable? = null
+
+    private var objectList = ArrayList<MapObject>()
 
     private val viewModel by lazy {
         ViewModelProviders.of(this, injector.vmMain()).get(MainViewModel::class.java)
@@ -65,10 +69,10 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
         b.detailsLayout.setOnClickListener {
             changed = if (changed) {
-                expand(b.detailsLayout, 300, resources.getDimension(R.dimen.size_100).toInt())
+                expand()
                 false
             } else {
-                collapse(b.detailsLayout, 300, resources.getDimension(R.dimen.size_300).toInt())
+                collapse()
                 true
             }
         }
@@ -78,6 +82,24 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         } else {
             requestPermission()
         }
+
+        setListener()
+    }
+
+    private fun expand() {
+        expand(b.detailsLayout, 300, resources.getDimension(R.dimen.size_100).toInt())
+        b.imgWayPoint.visibility = View.INVISIBLE
+        b.etWayA.visibility = View.INVISIBLE
+        b.etWayB.visibility = View.INVISIBLE
+        b.btnSearch.visibility = View.INVISIBLE
+    }
+
+    private fun collapse() {
+        collapse(b.detailsLayout, 500, resources.getDimension(R.dimen.size_900).toInt())
+        b.imgWayPoint.visibility = View.VISIBLE
+        b.etWayA.visibility = View.VISIBLE
+        b.etWayB.visibility = View.VISIBLE
+        b.btnSearch.visibility = View.VISIBLE
     }
 
     private fun requestPermission() {
@@ -102,6 +124,16 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         if (positioningManager != null) {
             positioningManager!!.start(
                 PositioningManager.LocationMethod.GPS_NETWORK)
+        }
+    }
+
+    private fun setListener() {
+
+        b.btnSearch.setOnClickListener {
+            val searchRequest = SearchRequest(b.etWayA.text.toString())
+            searchRequest.setSearchCenter(map.center)
+            searchRequest.execute(discoveryResultPage)
+
         }
     }
 
@@ -205,6 +237,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         }
     }
 
+    //LOCATION INFO -----------------------------------------------------------------------
     private fun updateLocationInfo(locationMethod: PositioningManager.LocationMethod?, geoPosition: GeoPosition?) {
         val sb = StringBuilder()
         val coordinate = geoPosition?.coordinate
@@ -227,7 +260,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
         sb.deleteCharAt(sb.length - 1)
 
-        b.txtDropUp.text = sb.toString()
+        Timber.d(sb.toString())
     }
 
     override fun onMapTransformStart() {
@@ -242,6 +275,45 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         }
     }
 
+    private val discoveryResultPage =
+        ResultListener<DiscoveryResultPage> { result, errorCode ->
+            if (errorCode == ErrorCode.NONE) {
+                for (item in result.items) {
+                    if (item.resultType == DiscoveryResult.ResultType.PLACE) {
+                        val placeLink = item as PlaceLink
+                        addMarkerAtPlace(placeLink)
+                    }
+                }
+            }
+        }
+
+
+    private fun addMarkerAtPlace(placeLink: PlaceLink) {
+        val img = Image()
+
+        try {
+            img.setImageResource(R.drawable.placeholder)
+        } catch (e : Exception) {
+            e.printStackTrace()
+        }
+
+        val mapMarker = MapMarker()
+        mapMarker.icon = img
+        mapMarker.coordinate = GeoCoordinate(placeLink.position)
+
+        val revGeoCode = ReverseGeocodeRequest(mapMarker.coordinate)
+
+        revGeoCode.execute(result)
+
+//        map.addMapObject(mapMarker)
+//        objectList.add(mapMarker)
+    }
+
+    //val result = ResultListener<Location> { location, errorCode -> Timber.d(location?.address.toString()) }
+
+    val result = ResultListener<Address> { address, errorCode ->
+        Toast.makeText(requireContext(), address?.text, Toast.LENGTH_LONG).show()
+    }
 
     companion object {
         const val GEO_POSITION_CODE = 200
