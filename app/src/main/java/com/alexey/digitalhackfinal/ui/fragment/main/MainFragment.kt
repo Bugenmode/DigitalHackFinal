@@ -1,6 +1,10 @@
 package com.alexey.digitalhackfinal.ui.fragment.main
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
 import android.os.Build
@@ -9,21 +13,27 @@ import android.telephony.TelephonyManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProviders
 import com.alexey.digitalhackfinal.R
 import com.alexey.digitalhackfinal.databinding.FragmentMainBinding
 import com.alexey.digitalhackfinal.di.injector
 import com.alexey.digitalhackfinal.ui.base.BaseFragment
+import com.alexey.digitalhackfinal.utils.collapse
+import com.alexey.digitalhackfinal.utils.expand
 import com.here.android.mpa.common.*
+import com.here.android.mpa.mapping.*
 import com.here.android.mpa.mapping.Map
-import com.here.android.mpa.mapping.MapMarker
-import com.here.android.mpa.mapping.MapPolyline
-import com.here.android.mpa.mapping.SupportMapFragment
 import timber.log.Timber
+//import com.here.android.mpa.common.LocationDataSourceHERE
+import java.lang.StringBuilder
 import java.lang.ref.WeakReference
+import java.util.*
+import kotlin.collections.ArrayList
 
-class MainFragment : BaseFragment() {
+class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListener, Map.OnTransformListener {
 
     private lateinit var b: FragmentMainBinding
 
@@ -33,7 +43,13 @@ class MainFragment : BaseFragment() {
 
     private lateinit var map: Map
 
-    val viewModel by lazy {
+    private var changed = false
+
+    private var mapTransforming: Boolean = false
+
+    private var pendingUpdated: Runnable? = null
+
+    private val viewModel by lazy {
         ViewModelProviders.of(this, injector.vmMain()).get(MainViewModel::class.java)
     }
 
@@ -46,12 +62,92 @@ class MainFragment : BaseFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initialize()
+
+        b.detailsLayout.setOnClickListener {
+            changed = if (changed) {
+                expand(b.detailsLayout, 300, resources.getDimension(R.dimen.size_100).toInt())
+                false
+            } else {
+                collapse(b.detailsLayout, 300, resources.getDimension(R.dimen.size_300).toInt())
+                true
+            }
+        }
+
+        if (hasPermission()) {
+            initialize()
+        } else {
+            requestPermission()
+        }
     }
 
+    private fun requestPermission() {
+        requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), GEO_POSITION_CODE)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        when (requestCode) {
+            GEO_POSITION_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults.all { gr -> gr == PackageManager.PERMISSION_GRANTED }) {
+                    initialize()
+                } else {
+                    Toast.makeText(requireContext(), "Включите доступ геолокации", Toast.LENGTH_LONG).show()
+                }
+                return
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (positioningManager != null) {
+            positioningManager!!.start(
+                PositioningManager.LocationMethod.GPS_NETWORK)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (positioningManager != null) {
+            positioningManager!!.stop()
+        }
+    }
+
+
+    // MAP INNIT -------------------------------------------------------------------------------------
     private fun initialize() {
-        // Search for the map fragment to finish setup by calling init().
         mapFragment = childFragmentManager.findFragmentById(R.id.mapfragment) as SupportMapFragment?
+
+        val myImage = Image()
+        val customImage = BitmapFactory.decodeResource(requireContext().resources, R.drawable.placeholder)
+        myImage.bitmap = customImage as Bitmap
+
+        mapFragment?.init { error ->
+            if (error == OnEngineInitListener.Error.NONE) {
+                map = mapFragment!!.map
+                map.setCenter(
+                    GeoCoordinate(55.798551, 49.106324), Map.Animation.NONE
+                )
+
+                map.addTransformListener(this@MainFragment)
+
+                map.zoomLevel = (map.maxZoomLevel + map.minZoomLevel) / 2
+
+                positioningManager = PositioningManager.getInstance()
+
+                positioningManager?.addListener(WeakReference<PositioningManager.OnPositionChangedListener>(this))
+
+                if (positioningManager!!.start(PositioningManager.LocationMethod.GPS_NETWORK)) {
+                    map.positionIndicator.isVisible = true
+                    map.positionIndicator.marker = myImage
+                } else {
+                    Toast.makeText(requireContext(), "PositioningManager.start: failed, exiting", Toast.LENGTH_LONG).show();
+                }
+
+            } else {
+                Timber.d("ERROR: Cannot initialize Map Fragment")
+            }
+        }
+
 
         val testPoints = ArrayList<GeoCoordinate>()
 
@@ -63,51 +159,10 @@ class MainFragment : BaseFragment() {
 
         //TODO NEED INFO
         val mapPolyline = MapPolyline(polyline)
-
-        val myImage = Image()
-
-        val image = requireActivity().getDrawable(R.drawable.arrow) as BitmapDrawable
-        myImage.bitmap = image.bitmap
-
-        val mapMarker = MapMarker(GeoCoordinate(59.163, 41.106324), myImage)
-
-        mapFragment?.init { error ->
-            if (error == OnEngineInitListener.Error.NONE) {
-                map = mapFragment!!.map
-                // Set the map center to the Vancouver region (no animation)
-                map.setCenter(
-                    GeoCoordinate(55.798551, 49.106324), Map.Animation.NONE)
-                // Set the zoom level to the average between min and max
-                map.zoomLevel = (map.maxZoomLevel + map.minZoomLevel) / 2
-
-                map.addMapObject(mapMarker)
-            } else {
-                Timber.d("ERROR: Cannot initialize Map Fragment")
-            }
-        }
-
-        val onPositionListener = object : PositioningManager.OnPositionChangedListener {
-            override fun onPositionFixChanged(
-                p0: PositioningManager.LocationMethod?,
-                p1: PositioningManager.LocationStatus?
-            ) {
-            }
-
-            override fun onPositionUpdated(
-                p0: PositioningManager.LocationMethod?,
-                position: GeoPosition?,
-                p2: Boolean
-            ) {
-                map.setCenter(position?.coordinate, Map.Animation.NONE)
-            }
-
-        }
-
-        positioningManager = PositioningManager.getInstance()
-
-        PositioningManager.getInstance().addListener(WeakReference(onPositionListener))
     }
 
+
+    //CONNECTION DATA ----------------------------------------------------------------
     private fun getConnectionData() {
         val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
         val operatorName = telephonyManager.networkOperatorName
@@ -122,5 +177,73 @@ class MainFragment : BaseFragment() {
 
         val downSpeed = networkCapabilities.linkDownstreamBandwidthKbps
         val upSpeed = networkCapabilities.linkUpstreamBandwidthKbps
+    }
+
+    private fun hasPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            requireContext(), Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    override fun onPositionFixChanged(
+        locationMethod: PositioningManager.LocationMethod?,
+        locationStatus: PositioningManager.LocationStatus?
+    ) {
+    }
+
+    override fun onPositionUpdated(
+        locationMethod: PositioningManager.LocationMethod?,
+        geoPosition: GeoPosition?,
+        mapMatched: Boolean
+    ) {
+        val coordinate = geoPosition?.coordinate
+        if (mapTransforming) {
+            pendingUpdated = Runnable { onPositionUpdated(locationMethod, geoPosition, mapMatched); }
+        } else {
+            map.setCenter(coordinate, Map.Animation.LINEAR)
+            updateLocationInfo(locationMethod, geoPosition)
+        }
+    }
+
+    private fun updateLocationInfo(locationMethod: PositioningManager.LocationMethod?, geoPosition: GeoPosition?) {
+        val sb = StringBuilder()
+        val coordinate = geoPosition?.coordinate
+
+        sb.append("Type: ").append(String.format(Locale.US, "%s\n", locationMethod?.name))
+        sb.append("Coordinate:")
+            .append(String.format(Locale.US, "%.6f, %.6f\n", coordinate?.latitude, coordinate?.longitude))
+
+        if (coordinate?.altitude != GeoCoordinate.UNKNOWN_ALTITUDE.toDouble()) {
+            sb.append("Altitude:").append(String.format(Locale.US, "%.2fm\n", coordinate?.altitude))
+        }
+
+        if (geoPosition?.heading != GeoPosition.UNKNOWN.toDouble()) {
+            sb.append("Heading:").append(String.format(Locale.US, "%.2f\n", geoPosition?.heading))
+        }
+
+        if (geoPosition?.speed != GeoPosition.UNKNOWN.toDouble()) {
+            sb.append("Speed:").append(String.format(Locale.US, "%.2fm/s\n", geoPosition?.speed))
+        }
+
+        sb.deleteCharAt(sb.length - 1)
+
+        b.txtDropUp.text = sb.toString()
+    }
+
+    override fun onMapTransformStart() {
+        mapTransforming = true
+    }
+
+    override fun onMapTransformEnd(mapState: MapState?) {
+        mapTransforming = false
+        if (pendingUpdated != null) {
+            pendingUpdated!!.run()
+            pendingUpdated = null
+        }
+    }
+
+
+    companion object {
+        const val GEO_POSITION_CODE = 200
     }
 }
