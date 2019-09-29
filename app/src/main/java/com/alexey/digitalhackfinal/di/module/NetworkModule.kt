@@ -2,7 +2,9 @@ package com.alexey.digitalhackfinal.di.module
 
 import com.alexey.digitalhackfinal.BuildConfig
 import com.alexey.digitalhackfinal.data.remote.interceptors.NoConnectionInterceptor
+import com.alexey.digitalhackfinal.data.remote.services.ApiService
 import com.google.gson.Gson
+import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import dagger.Module
 import dagger.Provides
 import okhttp3.OkHttpClient
@@ -46,10 +48,23 @@ class NetworkModule {
     @Singleton
     fun provideRetrofit(gson: Gson, okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl("https://google.com")
+            .baseUrl("https://strapi-test1123.herokuapp.com")
             .addConverterFactory(GsonConverterFactory.create(gson))
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .client(okHttpClient)
             .build()
     }
 
+    @Provides
+    @Singleton
+    fun provideApiService(
+        okHttpClient: OkHttpClient,
+        retrofit: Retrofit
+    ): ApiService {
+        val okHttpClientModified =
+            okHttpClient.newBuilder()
+                .build()
+        val retrofitModified = retrofit.newBuilder().client(okHttpClientModified).build()
+        return retrofitModified.create(ApiService::class.java)
+    }
 }

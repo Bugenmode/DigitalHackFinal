@@ -66,7 +66,7 @@
                     android:layout_alignTop="@id/imgWayPoint"
                     android:layout_toEndOf="@id/imgWayPoint"
                     android:layout_width="match_parent"
-                    android:layout_height="32dp"
+                    android:layout_height="42dp"
                     android:layout_marginEnd="16dp"
                     android:layout_marginStart="16dp"
                     android:text="@={vm.wayA}"
@@ -78,7 +78,7 @@
             <EditText
                     android:id="@+id/etWayB"
                     android:layout_width="match_parent"
-                    android:layout_height="32dp"
+                    android:layout_height="42dp"
                     android:layout_alignBottom="@id/imgWayPoint"
                     android:layout_toEndOf="@id/imgWayPoint"
                     android:layout_marginStart="16dp"

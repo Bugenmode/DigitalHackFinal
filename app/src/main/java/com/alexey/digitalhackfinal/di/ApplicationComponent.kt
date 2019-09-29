@@ -4,6 +4,7 @@ import android.app.Application
 import com.alexey.digitalhackfinal.App
 import com.alexey.digitalhackfinal.di.module.CommonModule
 import com.alexey.digitalhackfinal.di.module.NetworkModule
+import com.alexey.digitalhackfinal.di.module.RepositoryModule
 import com.alexey.digitalhackfinal.ui.fragment.main.MainViewModel
 import dagger.BindsInstance
 import dagger.Component
@@ -15,6 +16,7 @@ import javax.inject.Singleton
     modules = [
         CommonModule::class,
         NetworkModule::class,
+        RepositoryModule::class,
         AndroidSupportInjectionModule::class
     ]
 )

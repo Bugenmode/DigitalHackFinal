@@ -34,13 +34,4 @@ class ContainerActivity : BaseActivity() {
         navController = Navigation.findNavController(this, R.id.navHost)
         graph = navController.navInflater.inflate(R.navigation.navigation)
     }
-
-//    override fun onResume() {
-//        super.onResume()
-//
-//        if (positioningManager != null) {
-//            positioningManager?.start(PositioningManager.LocationMethod.GPS_NETWORK)
-//        }
-//    }
-//
 }

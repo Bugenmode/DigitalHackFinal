@@ -47,6 +47,7 @@
     <dimen name="size_330">330dp</dimen>
     <dimen name="size_356">356dp</dimen>
     <dimen name="size_500">500dp</dimen>
+    <dimen name="size_750">750dp</dimen>
     <dimen name="size_900">900dp</dimen>
 
     <dimen name="textSize_8">8sp</dimen>

@@ -5,39 +5,42 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.drawable.BitmapDrawable
-import android.net.ConnectivityManager
-import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Adapter
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.ViewModelProviders
 import com.alexey.digitalhackfinal.R
+import com.alexey.digitalhackfinal.data.remote.model.Coordinates
+import com.alexey.digitalhackfinal.data.remote.model.Location
+import com.alexey.digitalhackfinal.data.remote.model.PointResponse
 import com.alexey.digitalhackfinal.databinding.FragmentMainBinding
 import com.alexey.digitalhackfinal.di.injector
 import com.alexey.digitalhackfinal.ui.adapter.AddressAdapter
 import com.alexey.digitalhackfinal.ui.base.BaseFragment
+import com.alexey.digitalhackfinal.utils.EventData
 import com.alexey.digitalhackfinal.utils.collapse
 import com.alexey.digitalhackfinal.utils.expand
 import com.here.android.mpa.common.*
 import com.here.android.mpa.mapping.*
 import com.here.android.mpa.mapping.Map
+import com.here.android.mpa.routing.RouteManager
+import com.here.android.mpa.routing.RouteOptions
+import com.here.android.mpa.routing.RoutePlan
+import com.here.android.mpa.routing.RouteResult
 import com.here.android.mpa.search.*
 import timber.log.Timber
-import java.lang.Exception
-import java.lang.StringBuilder
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.collections.ArrayList
 
 @Suppress("DEPRECATION")
-class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListener, Map.OnTransformListener {
+class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListener, Map.OnTransformListener,
+    AddressAdapter.OnItemClickListener {
 
     private lateinit var b: FragmentMainBinding
 
@@ -51,13 +54,21 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
     private var mapTransforming: Boolean = false
 
+    private lateinit var mapRoute: MapRoute
+
     private var pendingUpdated: Runnable? = null
 
-    private var objectList = ArrayList<MapObject>()
+    private var adapter = AddressAdapter(this)
 
-    private var adapter = AddressAdapter()
+    private var coordinateA: GeoCoordinate? = null
+
+    private var coordinateB: GeoCoordinate? = null
+
+    private var coordinateList = ArrayList<Double>()
 
     private var list = ArrayList<Address>()
+
+    private var isActivated: Boolean = false
 
     private val viewModel by lazy {
         ViewModelProviders.of(this, injector.vmMain()).get(MainViewModel::class.java)
@@ -92,6 +103,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         setListener()
         setObservers()
 
+        viewModel.getPoints()
     }
 
     private fun expand() {
@@ -104,7 +116,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
     }
 
     private fun collapse() {
-        collapse(b.detailsLayout, 500, resources.getDimension(R.dimen.size_900).toInt())
+        collapse(b.detailsLayout, 500, resources.getDimension(R.dimen.size_750).toInt())
         b.imgWayPoint.visibility = View.VISIBLE
         b.etWayA.visibility = View.VISIBLE
         b.etWayB.visibility = View.VISIBLE
@@ -133,32 +145,112 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         super.onResume()
         if (positioningManager != null) {
             positioningManager!!.start(
-                PositioningManager.LocationMethod.GPS_NETWORK)
+                PositioningManager.LocationMethod.GPS_NETWORK
+            )
         }
     }
 
     private fun setListener() {
 
+        val routeManager = RouteManager()
+
+        val routePlan = RoutePlan()
+
+        val routeOptions = RouteOptions()
+
+        routeOptions.transportMode = RouteOptions.TransportMode.CAR
+
+        routeOptions.setHighwaysAllowed(false)
+
+        routeOptions.routeType = RouteOptions.Type.FASTEST
+
         b.btnSearch.setOnClickListener {
-            Toast.makeText(requireContext(), "Проложение пути", Toast.LENGTH_LONG).show()
+
+            val geocodeRequest =
+                GeocodeRequest(b.etWayB.text.toString()).setSearchArea(GeoCoordinate(55.798551, 49.106324), 1000)
+
+            expand()
+
+            geocodeRequest.execute { results, errorCode ->
+                if (errorCode == ErrorCode.NONE) {
+                    for (i in results!!) {
+                        Timber.d(i.location.coordinate.toString())
+                        coordinateB = i.location.coordinate
+
+                        routePlan.addWaypoint(coordinateA)
+                        routePlan.addWaypoint(coordinateB)
+
+                        routeManager.calculateRoute(routePlan, object : RouteManager.Listener {
+
+                            override fun onCalculateRouteFinished(
+                                error: RouteManager.Error?,
+                                routeResult: MutableList<RouteResult>?
+                            ) {
+                                if (error == RouteManager.Error.NONE) {
+                                    if (routeResult?.get(0)?.route != null) {
+                                        mapRoute = MapRoute(routeResult[0].route)
+
+                                        mapRoute.isManeuverNumberVisible = true
+
+                                        map.addMapObject(mapRoute)
+
+                                        val gbb = routeResult[0].route.boundingBox
+                                        map.zoomTo(gbb, Map.Animation.NONE, Map.MOVE_PRESERVE_ORIENTATION)
+
+                                        isActivated = true
+                                    } else {
+                                        Toast.makeText(
+                                            requireContext(),
+                                            "Error:route results returned is not valid",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+
+                            override fun onProgress(i: Int) {
+                            }
+
+                        })
+                    }
+                }
+            }
         }
+
     }
 
     private fun setObservers() {
-        viewModel.wayA.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
-            if (it != null) {
+        viewModel.wayB.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+            if (it != null && b.etWayB.isFocused) {
                 val searchRequest = SearchRequest(it)
                 searchRequest.setSearchCenter(map.center)
                 searchRequest.execute(discoveryResultPage)
             }
         })
 
-
-        viewModel.wayB.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
+        viewModel.data.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
             if (it != null) {
-                val searchRequest = SearchRequest(it)
-                searchRequest.setSearchCenter(map.center)
-                searchRequest.execute(discoveryResultPage)
+                for (i in it) {
+                    val image = Image()
+
+                    when {
+                        i.signal == "4g" -> {
+                            image.setImageResource(R.drawable.circle_blue)
+                            val customMarker = MapMarker(GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]), image)
+                            map.addMapObject(customMarker)
+                        }
+                        i.signal == "3g" -> {
+                            image.setImageResource(R.drawable.circle_yellow)
+                            val customMarker = MapMarker(GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]), image)
+                            map.addMapObject(customMarker)
+                        }
+                        else -> {
+                            image.setImageResource(R.drawable.circle_red)
+                            val customMarker = MapMarker(GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]), image)
+                            map.addMapObject(customMarker)
+                        }
+                    }
+                }
             }
         })
     }
@@ -177,6 +269,7 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
         val myImage = Image()
         val customImage = BitmapFactory.decodeResource(requireContext().resources, R.drawable.placeholder)
+
         myImage.bitmap = customImage as Bitmap
 
         mapFragment?.init { error ->
@@ -198,43 +291,36 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
                     map.positionIndicator.isVisible = true
                     map.positionIndicator.marker = myImage
                 } else {
-                    Toast.makeText(requireContext(), "PositioningManager.start: failed, exiting", Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(), "PositioningManager.start: failed, exiting", Toast.LENGTH_LONG)
+                        .show()
                 }
 
             } else {
                 Timber.d("ERROR: Cannot initialize Map Fragment")
             }
         }
-
-
-        val testPoints = ArrayList<GeoCoordinate>()
-
-        testPoints.add(GeoCoordinate(49.163, 49.106324, 10.0))
-        testPoints.add(GeoCoordinate(59.163, 41.106324, 10.0))
-        testPoints.add(GeoCoordinate(60.163, 59.106324, 10.0))
-
-        val polyline = GeoPolyline(testPoints)
-
-        //TODO NEED INFO
-        val mapPolyline = MapPolyline(polyline)
     }
 
 
-    //CONNECTION DATA ----------------------------------------------------------------
-    private fun getConnectionData() {
-        val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        val operatorName = telephonyManager.networkOperatorName
+    //NETWORK TYPE ----------------------------------------------------------------
+    private fun getNetworkType(): String {
+        val mTelephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
-        val connectivityManager =
-            requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val networkCapabilities = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
-        } else {
-            TODO("VERSION.SDK_INT < M")
+        return when (mTelephonyManager.networkType) {
+            TelephonyManager.NETWORK_TYPE_GPRS -> "2g"
+            TelephonyManager.NETWORK_TYPE_EDGE -> "2g"
+            TelephonyManager.NETWORK_TYPE_CDMA -> "2g"
+            TelephonyManager.NETWORK_TYPE_1xRTT -> "2g"
+            TelephonyManager.NETWORK_TYPE_IDEN -> "2g"
+            TelephonyManager.NETWORK_TYPE_HSDPA -> "3g"
+            TelephonyManager.NETWORK_TYPE_HSUPA -> "3g"
+            TelephonyManager.NETWORK_TYPE_HSPA -> "3g"
+            TelephonyManager.NETWORK_TYPE_EVDO_B -> "3g"
+            TelephonyManager.NETWORK_TYPE_EHRPD -> "3g"
+            TelephonyManager.NETWORK_TYPE_HSPAP -> "3g"
+            TelephonyManager.NETWORK_TYPE_LTE -> "4g"
+            else -> "NotFound"
         }
-
-        val downSpeed = networkCapabilities.linkDownstreamBandwidthKbps
-        val upSpeed = networkCapabilities.linkUpstreamBandwidthKbps
     }
 
     private fun hasPermission(): Boolean {
@@ -268,13 +354,19 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         val sb = StringBuilder()
         val coordinate = geoPosition?.coordinate
 
+        coordinateA = coordinate
+
+        val reverseGeocodeRequest = ReverseGeocodeRequest(coordinate)
+
+        reverseGeocodeRequest.execute { address, errorCode ->
+            if (errorCode == ErrorCode.NONE) {
+                b.etWayA.setText(address.text)
+            }
+        }
+
         sb.append("Type: ").append(String.format(Locale.US, "%s\n", locationMethod?.name))
         sb.append("Coordinate:")
             .append(String.format(Locale.US, "%.6f, %.6f\n", coordinate?.latitude, coordinate?.longitude))
-
-        if (coordinate?.altitude != GeoCoordinate.UNKNOWN_ALTITUDE.toDouble()) {
-            sb.append("Altitude:").append(String.format(Locale.US, "%.2fm\n", coordinate?.altitude))
-        }
 
         if (geoPosition?.heading != GeoPosition.UNKNOWN.toDouble()) {
             sb.append("Heading:").append(String.format(Locale.US, "%.2f\n", geoPosition?.heading))
@@ -285,6 +377,36 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         }
 
         sb.deleteCharAt(sb.length - 1)
+
+        try {
+            if (isActivated) {
+                val image = Image()
+
+                when {
+                    getNetworkType() == "4g" -> image.setImageResource(R.drawable.circle_blue)
+                    getNetworkType() == "3g" -> image.setImageResource(R.drawable.circle_yellow)
+                    getNetworkType() == "2g" -> image.setImageResource(R.drawable.circle_red)
+                    else -> {
+                        //nothing
+                    }
+                }
+
+                val telephonyManager = requireContext().getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+                val operatorName = telephonyManager.networkOperatorName
+
+
+                if (coordinate != null) {
+                    coordinateList.add(coordinate.latitude)
+                    coordinateList.add(coordinate.longitude)
+                    viewModel.postPoints(Location("Point", coordinateList), getNetworkType())
+                }
+
+                val customMarker = MapMarker(coordinate, image)
+                map.addMapObject(customMarker)
+            }
+        } catch (ex: Exception) {
+            Toast.makeText(requireContext(), "Some Error", Toast.LENGTH_LONG).show()
+        }
 
         Timber.d(sb.toString())
     }
@@ -307,7 +429,6 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
                 for (item in result.items) {
                     if (item.resultType == DiscoveryResult.ResultType.PLACE) {
                         val placeLink = item as PlaceLink
-//                        addMarkerAtPlace(placeLink)
 
                         val mapMarker = MapMarker()
                         mapMarker.coordinate = GeoCoordinate(placeLink.position)
@@ -328,28 +449,17 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         }
 
 
-    private fun addMarkerAtPlace(placeLink: PlaceLink) {
-        val img = Image()
-
-        try {
-            img.setImageResource(R.drawable.placeholder)
-        } catch (e : Exception) {
-            e.printStackTrace()
+    override fun onItemClick(item: Address) {
+        if (b.etWayA.isFocused) {
+            b.etWayA.setText(item.text)
+            viewModel.wayA.removeObservers(viewLifecycleOwner)
+            adapter.setAddressList(arrayListOf())
+        } else {
+            b.etWayB.setText(item.text)
+            viewModel.wayB.removeObservers(viewLifecycleOwner)
+            adapter.setAddressList(arrayListOf())
         }
-
-        val mapMarker = MapMarker()
-        mapMarker.icon = img
-        mapMarker.coordinate = GeoCoordinate(placeLink.position)
-
-        val revGeoCode = ReverseGeocodeRequest(mapMarker.coordinate)
-
-//        revGeoCode.execute(result)
-
-//        map.addMapObject(mapMarker)
-//        objectList.add(mapMarker)
     }
-
-    //val result = ResultListener<Location> { location, errorCode -> Timber.d(location?.address.toString()) }
 
     companion object {
         const val GEO_POSITION_CODE = 200

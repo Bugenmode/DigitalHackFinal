@@ -27,7 +27,7 @@ class App : Application(), DaggerComponentProvider {
             Timber.plant(object : Timber.DebugTree() {
                 override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
                     var newTag = tag
-                    if (tag != null) newTag = "AEBIT: $tag"
+                    if (tag != null) newTag = "BUGENMODE: $tag"
                     super.log(priority, newTag, message, t)
                 }
             })

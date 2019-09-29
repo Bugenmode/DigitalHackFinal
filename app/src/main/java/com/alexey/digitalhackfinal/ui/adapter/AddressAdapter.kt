@@ -8,7 +8,7 @@ import com.alexey.digitalhackfinal.R
 import com.here.android.mpa.search.Address
 import kotlinx.android.synthetic.main.item_address.view.*
 
-class AddressAdapter : RecyclerView.Adapter<AddressAdapter.ViewHolder>() {
+class AddressAdapter(var listener: OnItemClickListener) : RecyclerView.Adapter<AddressAdapter.ViewHolder>() {
 
     var list: MutableList<Address> = mutableListOf()
 
@@ -31,9 +31,16 @@ class AddressAdapter : RecyclerView.Adapter<AddressAdapter.ViewHolder>() {
     }
 
 
+    interface OnItemClickListener{
+        fun onItemClick(item: Address)
+    }
+
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun bind(address: Address) {
             itemView.txtAddress.text = address.text
+            itemView.layoutItem.setOnClickListener {
+                listener.onItemClick(address)
+            }
         }
     }
 }
