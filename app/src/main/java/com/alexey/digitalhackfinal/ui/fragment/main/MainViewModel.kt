@@ -19,7 +19,7 @@ class MainViewModel @Inject constructor(
 
     var wayA = MutableLiveData<String>()
     var wayB = MutableLiveData<String>()
-    var data = MutableLiveData<List<PointResponse>>()
+    var data = MutableLiveData<List<PointResponse>>().apply { postValue(null) }
 
     fun getPoints() {
         pointRepository.getPoints()
@@ -27,7 +27,7 @@ class MainViewModel @Inject constructor(
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({
                 if (it.isSuccessful) {
-                    data.value = it.body()
+                    data.postValue(it.body())
                 }
             }, {
                 Timber.d(it.toString())

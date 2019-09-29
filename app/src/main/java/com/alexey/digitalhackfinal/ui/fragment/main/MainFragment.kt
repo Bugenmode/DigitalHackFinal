@@ -103,6 +103,10 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
         setListener()
         setObservers()
 
+    }
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
         viewModel.getPoints()
     }
 
@@ -230,24 +234,37 @@ class MainFragment : BaseFragment(), PositioningManager.OnPositionChangedListene
 
         viewModel.data.observe(viewLifecycleOwner, androidx.lifecycle.Observer {
             if (it != null) {
-                for (i in it) {
-                    val image = Image()
+                if (mapFragment != null) {
+                    if (mapFragment?.isAdded!!) {
+                        for (i in it) {
+                            val image = Image()
 
-                    when {
-                        i.signal == "4g" -> {
-                            image.setImageResource(R.drawable.circle_blue)
-                            val customMarker = MapMarker(GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]), image)
-                            map.addMapObject(customMarker)
-                        }
-                        i.signal == "3g" -> {
-                            image.setImageResource(R.drawable.circle_yellow)
-                            val customMarker = MapMarker(GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]), image)
-                            map.addMapObject(customMarker)
-                        }
-                        else -> {
-                            image.setImageResource(R.drawable.circle_red)
-                            val customMarker = MapMarker(GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]), image)
-                            map.addMapObject(customMarker)
+                            when {
+                                i.signal == "4g" -> {
+                                    image.setImageResource(R.drawable.circle_blue)
+                                    val customMarker = MapMarker(
+                                        GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]),
+                                        image
+                                    )
+                                    map.addMapObject(customMarker)
+                                }
+                                i.signal == "3g" -> {
+                                    image.setImageResource(R.drawable.circle_yellow)
+                                    val customMarker = MapMarker(
+                                        GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]),
+                                        image
+                                    )
+                                    map.addMapObject(customMarker)
+                                }
+                                else -> {
+                                    image.setImageResource(R.drawable.circle_red)
+                                    val customMarker = MapMarker(
+                                        GeoCoordinate(i.location.coordinates[0], i.location.coordinates[1]),
+                                        image
+                                    )
+                                    map.addMapObject(customMarker)
+                                }
+                            }
                         }
                     }
                 }
